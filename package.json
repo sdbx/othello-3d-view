@@ -29,6 +29,7 @@
   },
   "homepage": "https://github.com/sdbx/othello-3d-view#readme",
   "dependencies": {
+    "gl-matrix": "^2.4.0",
     "webglue": "^1.0.13"
   },
   "devDependencies": {
