@@ -2,9 +2,8 @@ import Renderer from 'webglue/lib/renderer';
 import Camera from 'webglue/lib/camera';
 import CameraController from 'webglue/lib/contrib/blenderController';
 
+import loadOBJMTL from './util/loadOBJMTL';
 import MeshTransform from 'webglue/lib/meshTransform';
-import box from 'webglue/lib/geom/box';
-import calcNormals from 'webglue/lib/geom/calcNormals';
 
 document.body.style.margin = '0';
 document.body.style.padding = '0';
@@ -30,41 +29,26 @@ let camera = new Camera();
 let controller = new CameraController(canvas, document, camera);
 
 let transform = new MeshTransform();
-transform.rotateY(Math.PI / 4);
-let geometry = renderer.geometries.create(calcNormals(box()));
-let shader = renderer.shaders.create(`
-#version 100
+// transform.rotateY(Math.PI / 4);
+let shader = renderer.shaders.create(
+  require('./shader/diffuse.vert'),
+  require('./shader/diffuse.frag'),
+);
 
-attribute vec3 aPosition;
-attribute vec3 aNormal;
+let al = loadOBJMTL(renderer, shader,
+  require('./geom/othello_al.obj'),
+  require('./geom/othello_al.mtl'));
 
-uniform mat4 uProjection;
-uniform mat4 uView;
-uniform mat4 uModel;
-uniform mat3 uNormal;
-
-varying lowp vec3 vColor;
-
-void main(void) {
-  gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
-  lowp vec3 normalDir = normalize(
-    (uView * vec4(uNormal * aNormal, 0.0)).xyz);
-  vColor = normalDir * 0.5 + vec3(0.5, 0.5, 0.5);
-}
-`, `
-varying lowp vec3 vColor;
-
-void main() {
-  gl_FragColor = vec4(vColor, 1.0);
-}
-`);
+let board = loadOBJMTL(renderer, shader,
+  require('./geom/othello_board.obj'),
+  require('./geom/othello_board.mtl'));
 
 function animate(time) {
   if (prevTime === -1) prevTime = time;
   let delta = (time - prevTime) / 1000;
   prevTime = time;
 
-  transform.rotateY(delta * 3);
+  // transform.rotateY(delta * 3);
   controller.update(delta);
 
   renderer.render({
@@ -74,14 +58,14 @@ function animate(time) {
       cull: gl.BACK,
       depth: gl.LEQUAL,
     },
-    geometry: geometry,
-    shader: shader,
     uniforms: {
       uModel: transform.get,
       uNormal: transform.getNormal,
       uView: camera.getView,
       uProjection: camera.getProjection,
+      uProjectionView: camera.getPV,
     },
+    passes: [al, board],
   });
   window.requestAnimationFrame(animate);
 }
